@@ -1,6 +1,8 @@
 from langchain_classic.output_parsers import StructuredOutputParser, ResponseSchema
 from langchain_core.output_parsers import BaseOutputParser
 
+from .models import Recipe
+
 
 def get_parse_recipe_output() -> BaseOutputParser:
 
@@ -15,7 +17,7 @@ def get_parse_recipe_output() -> BaseOutputParser:
         ),
         ResponseSchema(
             name="steps",
-            description="Ordered list of cooking steps as strings"
+            description="List of cooking steps as strings"
         ),
         ResponseSchema(
             name="estimated_time",
@@ -37,3 +39,22 @@ def get_parse_recipe_output() -> BaseOutputParser:
 
     parser = StructuredOutputParser.from_response_schemas(response_schemas)
     return parser
+
+
+def parse_recipe_output(raw: str) -> Recipe:
+    """Parse raw LLM output into a typed `Recipe` model."""
+    parser = get_parse_recipe_output()
+    
+    try:
+        parsed = parser.parse(raw)
+    except Exception:
+        print(raw)
+        raise ValueError("Failed to parse LLM output")
+
+    if not isinstance(parsed, dict):
+        try:
+            parsed = dict(parsed)
+        except Exception:
+            raise TypeError("Parsed output from StructuredOutputParser is not a dict")
+
+    return Recipe.parse_obj(parsed)

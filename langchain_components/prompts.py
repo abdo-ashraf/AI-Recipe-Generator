@@ -3,8 +3,10 @@ from langchain_core.prompts import PromptTemplate
 _BASE_PROMPT = """
 You are a helpful assistant that generates structured recipe data.
 
+Mode instructions:
 {mode_instruction}
 
+Output format instructions:
 {format_instructions}
 
 Rules:

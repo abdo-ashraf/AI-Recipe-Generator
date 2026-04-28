@@ -12,7 +12,8 @@ streamlit run app.py
 Visit `http://localhost:8501` and configure settings in the sidebar:
 - choose provider (`openai`, `huggingface`, or `openrouter`)
 - enter provider API key (never stored in `.env`)
-- set temperature using the slider
+- choose output language and generation mode
+- toggle raw output visibility
 
 ## LLM Providers
 
@@ -31,9 +32,10 @@ docker run -p 8501:8501 ai-recipe
 
 ## Architecture
 
-- The code is written with a provider-agnostic `BaseLLMProvider` and adapters for OpenAI, Hugging Face, and OpenRouter. Add new providers by implementing `BaseLLMProvider` in `langchain_components/llm_providers/`.
-- The `SYSTEM_PROMPT` in `langchain_components/prompts.py` is strict to encourage consistent parsing.
-- All chains and parsers are independent of the LLM provider.
+- The code is written with a provider-agnostic `BaseLLMProvider` and adapters for OpenAI, Hugging Face, and OpenRouter.
+- Shared OpenAI-compatible invocation logic lives in `langchain_components/llm_providers/openai_compatible.py`.
+- The Streamlit app stays thin and renders a typed `RecipeResult` from `langchain_components/models.py`.
+- The structured output parser is isolated from the UI and is used to produce typed recipe data.
 
 ## Adding a New Provider
 
@@ -42,17 +44,16 @@ docker run -p 8501:8501 ai-recipe
    from .base import BaseLLMProvider
    
    class MyProviderAdapter(BaseLLMProvider):
-       def __init__(self, model_name: str = None, temperature: float = 0.0, api_key: str = None):
+       def __init__(self, model_name: str = None, api_key: str = None):
            if not api_key:
                raise ValueError("Provide an API key")
            
            model = model_name or "default-model"
-           temp = float(temperature)
            
            # Initialize your LLM client here
            self.llm = YourLLMClient(api_key=api_key, model=model)
-       
-       def generate(self, prompt: str, max_tokens: int = 1024, temperature: float = None) -> str:
+
+       def generate(self, prompt: str, mode: str = "natural") -> str:
            response = self.llm.generate(prompt)
            return response.text
    ```
@@ -61,14 +62,14 @@ docker run -p 8501:8501 ai-recipe
    ```python
    from .llm_providers.<provider>_adapter import MyProviderAdapter
    
-   def get_llm_provider(provider_name: Optional[str] = None, model_name: Optional[str] = None, temperature: Optional[float] = None, api_key: Optional[str] = None) -> BaseLLMProvider:
+   def get_llm_provider(provider_name: Optional[str] = None, model_name: Optional[str] = None, api_key: Optional[str] = None) -> BaseLLMProvider:
        name = (provider_name or "openai").lower()
        if name == "openai":
-           return OpenAIProvider(model_name=model_name, temperature=temperature if temperature is not None else 0.0, api_key=api_key)
+           return OpenAIProvider(model_name=model_name, api_key=api_key)
        elif name == "huggingface":
-           return HuggingFaceProvider(model_name=model_name, temperature=temperature if temperature is not None else 0.0, api_key=api_key)
+           return HuggingFaceProvider(model_name=model_name, api_key=api_key)
        elif name == "myprovider":
-           return MyProviderAdapter(model_name=model_name, temperature=temperature if temperature is not None else 0.0, api_key=api_key)
+           return MyProviderAdapter(model_name=model_name, api_key=api_key)
        raise ValueError(f"Unsupported LLM provider: {name}")
    ```
 
@@ -78,23 +79,11 @@ See `langchain_components/llm_providers/PROVIDER_TEMPLATE.md` for detailed examp
 
 ## Testing
 
-All tests are organized in the `tests/` directory:
+There is not yet a dedicated automated test suite in this workspace. The current verification path is to run the Streamlit app locally and confirm recipe generation, structured parsing, and the raw-output toggle.
 
-```bash
-# Run smoke tests
-python tests/test_smoke.py
+## Future Work
 
-# Test Hugging Face integration
-python tests/test_huggingface_integration.py
-
-# Run comprehensive integration tests
-python tests/test_comprehensive.py
-
-# Validate app structure
-python tests/test_app_structure.py
-```
-
-Run all tests at once with a simple loop:
-```bash
-for test in tests/test_*.py; do python "$test"; done
-```
+- Add a small `tests/` directory for parser, provider factory, and orchestration coverage.
+- Move sidebar settings into a typed configuration object.
+- Add a dedicated render helper for Arabic/RTL presentation if the UI grows further.
+- Consider removing unused legacy compatibility folders once nothing imports them.

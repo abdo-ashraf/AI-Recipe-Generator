@@ -1,14 +1,15 @@
-from ..llm_providers.base import BaseLLMProvider, PRESETS
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
+from .openai_compatible import OpenAICompatibleProvider
 
-class HuggingFaceProvider(BaseLLMProvider):
+class HuggingFaceProvider(OpenAICompatibleProvider):
     """Hugging Face provider using OpenAI-compatible API.
     
     Requires:
     - api_key argument (Hugging Face API token)
     """
     
-    def __init__(self, model_name: str = None, api_key: str = None):
+    def __init__(self, model_name: str | None = None, api_key: str | None = None):
         if not api_key:
             raise ValueError("Provide a Hugging Face API key in the settings panel")
 
@@ -18,16 +19,5 @@ class HuggingFaceProvider(BaseLLMProvider):
         self.llm = ChatOpenAI(
             model=model,
             base_url="https://router.huggingface.co/v1",
-            api_key=api_key,
+            api_key=SecretStr(api_key),
         )
-
-    def generate(self, prompt: str, mode: str = "natural") -> str:
-        # LangChain ChatOpenAI invoke returns a BaseMessage; extract text
-
-        # fallback safety
-        if mode not in PRESETS:
-            mode = "natural"
-        
-        from langchain_core.messages import HumanMessage
-        response = self.llm.bind(**PRESETS[mode]).invoke([HumanMessage(content=prompt)])
-        return response.content

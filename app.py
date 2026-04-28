@@ -1,5 +1,6 @@
 import streamlit as st
 from langchain_components.chains import Orchestrator
+from langchain_components.models import RecipeResult
 
 st.set_page_config(page_title="AI Recipe Generator", layout="centered")
 st.title("AI Recipe Generator — وصفة مع LLM")
@@ -21,6 +22,41 @@ with st.sidebar:
 ingredients = st.text_area("Enter your ingredients (one line or comma separated):", height=150)
 # lang = st.radio("Language / اللغة:", options=["Arabic", "English"]) 
 
+
+def render_recipe_result(result: RecipeResult, show_raw_output: bool) -> None:
+    st.subheader("Parsed Output")
+    parsed = result.parsed
+    st.markdown(f"**Title:** {parsed.title}")
+
+    estimated_time = parsed.estimated_time if parsed.estimated_time is not None else "N/A"
+    estimated_calories = parsed.estimated_calories if parsed.estimated_calories is not None else "N/A"
+    estimated_cost = parsed.estimated_cost if parsed.estimated_cost is not None else "N/A"
+
+    st.markdown(
+        f"**Estimated time:** {estimated_time} minutes | "
+        f"**Estimated calories:** {estimated_calories} kcal | "
+        f"**Estimated cost:** {estimated_cost}"
+    )
+
+    if parsed.ingredients:
+        st.markdown("**Ingredients:**")
+        for item in parsed.ingredients:
+            st.write(f"- {item}")
+
+    if parsed.steps:
+        st.markdown("**Steps:**")
+        for step in parsed.steps:
+            st.write(f"- {step}")
+
+    if parsed.alternatives:
+        st.markdown("**Alternatives:**")
+        for alternative in parsed.alternatives:
+            st.write(f"- {alternative}")
+
+    if show_raw_output:
+        st.subheader("Raw Output")
+        st.code(result.raw)
+
 if st.button("Generate Recipe"):
     if not ingredients.strip():
         st.error("Please provide ingredients.")
@@ -32,37 +68,7 @@ if st.button("Generate Recipe"):
                     api_key=provider_api_key or None,
                 )
                 result = orchestrator.generate_recipe(ingredients, language=language, mode=mode)
-                st.subheader("Parsed Output")
-                parsed = result.get("parsed", {})
-                st.markdown(f"**Title:** {parsed.get('title', 'N/A')}")
-                st.markdown(f"**Language:** {parsed.get('language', language)}")
-                st.markdown(
-                    f"**Estimated time:** {parsed.get('estimated_time', 'N/A')} minutes | "
-                    f"**Estimated calories:** {parsed.get('estimated_calories', 'N/A')} kcal | "
-                    f"**Estimated cost:** {parsed.get('estimated_cost', 'N/A')}"
-                )
-
-                ingredients_list = parsed.get("ingredients", [])
-                if ingredients_list:
-                    st.markdown("**Ingredients:**")
-                    for item in ingredients_list:
-                        st.write(f"- {item}")
-
-                steps_list = parsed.get("steps", [])
-                if steps_list:
-                    st.markdown("**Steps:**")
-                    for step in steps_list:
-                        st.write(f"- {step}")
-
-                alternatives_list = parsed.get("alternatives", [])
-                if alternatives_list:
-                    st.markdown("**Alternatives:**")
-                    for alternative in alternatives_list:
-                        st.write(f"- {alternative}")
-
-                if show_raw_output:
-                    st.subheader("Raw Output")
-                    st.code(result.get("raw", ""))
+                render_recipe_result(result, show_raw_output)
             except ValueError as e:
                 st.error(f"Configuration error: {e}")
             except Exception as e:
