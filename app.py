@@ -28,17 +28,22 @@ def apply_custom_styles(is_rtl: bool = False):
         direction: {direction};
         text-align: {align};
         font-family: {'Noto Naskh Arabic, Tahoma' if is_rtl else 'Segoe UI'};
+        /* Automatically switches between black and white text */
+        color: var(--text-color); 
     }}
 
     textarea {{
         direction: {direction} !important;
         text-align: {align} !important;
+        color: var(--text-color) !important;
+        background-color: var(--background-color) !important;
+        border: 1px solid var(--secondary-background-color) !important;
     }}
 
     .recipe-title {{
         font-size: 2.3em;
         font-weight: bold;
-        color: #FF6B6B;
+        color: #FF6B6B; /* Accent color stays the same for brand identity */
         text-align: center;
         margin-bottom: 20px;
     }}
@@ -51,8 +56,9 @@ def apply_custom_styles(is_rtl: bool = False):
 
     .stat-box {{
         flex: 1;
+        /* Gradients look great in both modes */
         background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
+        color: white !important; 
         padding: 15px;
         border-radius: 10px;
         text-align: center;
@@ -68,7 +74,9 @@ def apply_custom_styles(is_rtl: bool = False):
     }}
 
     .item {{
-        background: #f7f7f7;
+        /* Switches to light gray in Light Mode, dark gray in Dark Mode */
+        background: var(--secondary-background-color); 
+        color: var(--text-color);
         padding: 12px;
         border-radius: 6px;
         margin: 8px 0;
@@ -78,6 +86,7 @@ def apply_custom_styles(is_rtl: bool = False):
 
     .item:hover {{
         transform: translateY(-2px);
+        filter: brightness(95%); /* Slightly dims the box on hover regardless of mode */
     }}
 
     .center-btn {{
@@ -85,8 +94,9 @@ def apply_custom_styles(is_rtl: bool = False):
         margin: auto;
     }}
 
+    /* Makes the sidebar background dynamic based on Streamlit settings */
     [data-testid="stSidebar"] {{
-        background-color: #0f172a;
+        background-color: var(--sidebar-background-color);
     }}
     </style>
     """
