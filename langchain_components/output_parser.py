@@ -1,45 +1,39 @@
-import re
-from typing import Dict
+from langchain_classic.output_parsers import StructuredOutputParser, ResponseSchema
+from langchain_core.output_parsers import BaseOutputParser
 
 
-def parse_recipe_output(text: str) -> Dict:
-    # Attempt to find the section between the markers
-    m = re.search(r"---RECIPE-START---(.*)---RECIPE-END---", text, re.S)
-    body = m.group(1).strip() if m else text
+def get_parse_recipe_output() -> BaseOutputParser:
 
-    # Simple extraction helpers
-    def extract_field(tag: str) -> str:
-        pat = rf"{tag}:\s*(.*)"
-        mm = re.search(pat, body)
-        return mm.group(1).strip() if mm else ""
+    response_schemas = [
+        ResponseSchema(
+            name="title",
+            description="Short recipe title"
+        ),
+        ResponseSchema(
+            name="ingredients",
+            description="List of ingredients as strings"
+        ),
+        ResponseSchema(
+            name="steps",
+            description="Ordered list of cooking steps as strings"
+        ),
+        ResponseSchema(
+            name="estimated_time",
+            description="Estimated cooking time in minutes as an integer"
+        ),
+        ResponseSchema(
+            name="estimated_calories",
+            description="Estimated calories as an integer (kcal)"
+        ),
+        ResponseSchema(
+            name="estimated_cost",
+            description="Estimated cost with currency, e.g. 'USD 10' or 'EGP 150'"
+        ),
+        ResponseSchema(
+            name="alternatives",
+            description="List of ingredient alternatives in format 'ingredient -> alternative'"
+        ),
+    ]
 
-    def extract_list(section: str) -> list:
-        pat = rf"{section}:\s*(.*?)\n\n"
-        mm = re.search(pat, body, re.S)
-        if not mm:
-            # fallback: lines starting with -
-            return [l.strip()[2:].strip() for l in body.splitlines() if l.strip().startswith("-")]
-        items = [line.strip()[2:].strip() for line in mm.group(1).splitlines() if line.strip().startswith("-")]
-        return items
-
-    title = extract_field("Title")
-    lang = extract_field("Language")
-    time = extract_field("Estimated time")
-    calories = extract_field("Estimated calories")
-    cost = extract_field("Estimated cost")
-    ingredients = extract_list("Ingredients")
-    steps = []
-    # steps: capture numbered steps
-    steps_matches = re.findall(r"^\s*\d+\.\s*(.*)$", body, re.M)
-    if steps_matches:
-        steps = [s.strip() for s in steps_matches]
-
-    return {
-        "title": title,
-        "language": lang,
-        "time": time,
-        "calories": calories,
-        "cost": cost,
-        "ingredients": ingredients,
-        "steps": steps,
-    }
+    parser = StructuredOutputParser.from_response_schemas(response_schemas)
+    return parser

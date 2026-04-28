@@ -14,7 +14,9 @@ with st.sidebar:
     }
     provider_label = provider_label_map.get(provider, "Provider API key")
     provider_api_key = st.text_input(provider_label, type="password")
-    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.0, step=0.1)
+    mode = st.selectbox("Mode", options=["strict", "natural", "creative"], index=1)
+    language = st.selectbox("Output language", options=["Arabic", "English"], index=0)
+    show_raw_output = st.checkbox("Show raw output", value=False)
 
 ingredients = st.text_area("Enter your ingredients (one line or comma separated):", height=150)
 # lang = st.radio("Language / اللغة:", options=["Arabic", "English"]) 
@@ -27,22 +29,40 @@ if st.button("Generate Recipe"):
             try:
                 orchestrator = Orchestrator(
                     provider_name=provider,
-                    temperature=temperature,
                     api_key=provider_api_key or None,
                 )
-                result = orchestrator.generate_recipe(ingredients)
-                st.subheader("Raw Output")
-                st.code(result.get("raw", ""))
+                result = orchestrator.generate_recipe(ingredients, language=language, mode=mode)
                 st.subheader("Parsed Output")
                 parsed = result.get("parsed", {})
-                st.markdown(f"**Title:** {parsed.get('title')}")
-                st.markdown(f"**Time:** {parsed.get('time')} | **Calories:** {parsed.get('calories')} | **Cost:** {parsed.get('cost')}")
-                st.markdown("**Ingredients:**")
-                for it in parsed.get("ingredients", []):
-                    st.write(f"- {it}")
-                st.markdown("**Steps:**")
-                for s in parsed.get("steps", []):
-                    st.write(f"- {s}")
+                st.markdown(f"**Title:** {parsed.get('title', 'N/A')}")
+                st.markdown(f"**Language:** {parsed.get('language', language)}")
+                st.markdown(
+                    f"**Estimated time:** {parsed.get('estimated_time', 'N/A')} minutes | "
+                    f"**Estimated calories:** {parsed.get('estimated_calories', 'N/A')} kcal | "
+                    f"**Estimated cost:** {parsed.get('estimated_cost', 'N/A')}"
+                )
+
+                ingredients_list = parsed.get("ingredients", [])
+                if ingredients_list:
+                    st.markdown("**Ingredients:**")
+                    for item in ingredients_list:
+                        st.write(f"- {item}")
+
+                steps_list = parsed.get("steps", [])
+                if steps_list:
+                    st.markdown("**Steps:**")
+                    for step in steps_list:
+                        st.write(f"- {step}")
+
+                alternatives_list = parsed.get("alternatives", [])
+                if alternatives_list:
+                    st.markdown("**Alternatives:**")
+                    for alternative in alternatives_list:
+                        st.write(f"- {alternative}")
+
+                if show_raw_output:
+                    st.subheader("Raw Output")
+                    st.code(result.get("raw", ""))
             except ValueError as e:
                 st.error(f"Configuration error: {e}")
             except Exception as e:
