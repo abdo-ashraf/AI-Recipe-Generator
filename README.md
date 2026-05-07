@@ -2,18 +2,20 @@
 
 Streamlit + LangChain prototype that generates recipes from ingredients, estimates calories and cost, and suggests alternatives.
 
-Quick start
+Quick start (local)
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate   # or .venv\Scripts\Activate.ps1 on Windows
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Visit `http://localhost:8501` and configure settings in the sidebar:
-- choose provider (`openai`, `huggingface`, or `openrouter`)
-- enter provider API key (never stored in `.env`)
-- choose output language and generation mode
-- toggle raw output visibility
+Visit http://localhost:8501 and configure settings in the sidebar:
+- Choose provider (`openai`, `huggingface`, or `openrouter`)
+- Enter provider API key (do not commit keys to source control)
+- Choose output language and generation mode
+- Toggle raw output visibility
 
 ## LLM Providers
 
@@ -25,9 +27,27 @@ Both providers use the same OpenAI-compatible interface under the hood, so they'
 
 ## Docker
 
+Build the production image and run the Streamlit app (default port 8501):
+
 ```bash
-docker build -t ai-recipe .
-docker run -p 8501:8501 ai-recipe
+docker build -t ai-recipe:latest .
+docker run --rm -p 8501:8501 ai-recipe:latest
+```
+
+Pass provider API keys via environment variables when running the container:
+
+```bash
+docker run --rm -p 8501:8501 \
+    -e OPENAI_API_KEY=sk_xxx \
+    -e HF_API_KEY=hf_xxx \
+    -e OPENROUTER_API_KEY=or_xxx \
+    ai-recipe:latest
+```
+
+To change the Streamlit port at runtime use the `PORT` env var (Dockerfile honors `$PORT`):
+
+```bash
+docker run --rm -p 8080:8080 -e PORT=8080 ai-recipe:latest
 ```
 
 ## Architecture
@@ -79,11 +99,20 @@ See `langchain_components/llm_providers/PROVIDER_TEMPLATE.md` for detailed examp
 
 ## Testing
 
-There is not yet a dedicated automated test suite in this workspace. The current verification path is to run the Streamlit app locally and confirm recipe generation, structured parsing, and the raw-output toggle.
+There is no automated test suite yet. Quick verification steps:
+
+1. Run the app locally and exercise recipe generation for several inputs.
+2. Confirm the structured parser (`langchain_components/output_parser.py`) maps responses into `RecipeResult` correctly.
+3. Test different providers and confirm behavior when API keys are missing.
 
 ## Future Work
 
-- Add a small `tests/` directory for parser, provider factory, and orchestration coverage.
-- Move sidebar settings into a typed configuration object.
+- Add a `tests/` directory for parser, provider factory, and orchestration coverage.
+- Move sidebar settings into a typed configuration object or read them from env config files.
 - Add a dedicated render helper for Arabic/RTL presentation if the UI grows further.
-- Consider removing unused legacy compatibility folders once nothing imports them.
+- Consider CI and automated dependency checks (Dependabot or Renovate) for pinned deps.
+
+If you'd like, I can:
+
+- Add `python-dotenv` and update `app.py` to load `.env` automatically for local development.
+- Create a `docker-compose.yml` for local compose-based development.
